@@ -3,96 +3,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A simple personal website — free to host anywhere." />
-  <title>Your Name — Home</title>
+  <meta name="description" content="Track workouts, calories, and hours with live analytics." />
+  <title>FitLog — Workout Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="logo" href="#">Your Name</a>
+    <a class="logo" href="#">FitLog</a>
     <nav aria-label="Main">
-      <a href="#about">About</a>
-      <a href="#work">Work</a>
-      <a href="#contact">Contact</a>
+      <a href="#log">Log</a>
+      <a href="#analytics">Analytics</a>
     </nav>
-    <button class="menu-toggle" aria-label="Open menu" aria-expanded="false">
-      <span></span><span></span>
-    </button>
+    <button type="button" class="theme-toggle" aria-label="Switch color theme">◐</button>
   </header>
 
-  <main>
-    <section class="hero">
-      <p class="eyebrow">Hello, I'm</p>
-      <h1>Your Name</h1>
-      <p class="lead">
-        I build things on the web. This is a simple, fast site you can customize
-        and host for free on GitHub Pages, Netlify, or Vercel.
-      </p>
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="#contact">Get in touch</a>
-        <a class="btn btn-ghost" href="#work">See my work</a>
+  <main class="app">
+    <section class="hero-banner">
+      <h1>Workout tracker</h1>
+      <p>Log sessions below. Analytics update instantly as you add, edit, or remove workouts.</p>
+    </section>
+
+    <!-- LOG SECTION -->
+    <section id="log" class="panel">
+      <div class="panel-head">
+        <h2>My workouts</h2>
+        <p class="panel-desc">Add or edit entries — date, type, calories, and duration.</p>
+      </div>
+
+      <form id="workout-form" class="workout-form">
+        <input type="hidden" id="workout-id" />
+        <div class="form-grid">
+          <label>
+            Day
+            <input type="date" id="workout-date" required />
+          </label>
+          <label>
+            Type
+            <select id="workout-type" required>
+              <option value="Strength">Strength</option>
+              <option value="Cardio">Cardio</option>
+              <option value="HIIT">HIIT</option>
+              <option value="Yoga">Yoga</option>
+              <option value="Sports">Sports</option>
+              <option value="Walk">Walk</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <label>
+            Calories
+            <input type="number" id="workout-calories" min="0" step="1" placeholder="e.g. 350" required />
+          </label>
+          <label>
+            Hours
+            <input type="number" id="workout-hours" min="0" step="0.25" placeholder="e.g. 1.5" required />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit-btn">Add workout</button>
+          <button type="button" class="btn btn-ghost" id="cancel-edit" hidden>Cancel edit</button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="workout-table" aria-label="Workout log">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Type</th>
+              <th>Calories</th>
+              <th>Hours</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="workout-list">
+            <tr class="empty-row"><td colspan="5">No workouts yet. Add your first session above.</td></tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
-    <section id="about" class="section">
-      <h2>About</h2>
-      <div class="about-grid">
-        <p>
-          Replace this with a short bio — what you do, what you care about,
-          and what you're looking for. A few sentences is enough.
-        </p>
-        <ul class="skills">
-          <li>Design</li>
-          <li>Development</li>
-          <li>Writing</li>
-          <li>Photography</li>
-        </ul>
+    <!-- ANALYTICS SECTION -->
+    <section id="analytics" class="panel">
+      <div class="panel-head">
+        <h2>Analytics</h2>
+        <p class="panel-desc">Comparisons and trends from your log — updates in real time.</p>
       </div>
-    </section>
 
-    <section id="work" class="section">
-      <h2>Selected work</h2>
-      <div class="cards">
-        <article class="card">
-          <span class="card-tag">Project</span>
-          <h3>Project One</h3>
-          <p>A brief description of something you built or contributed to.</p>
-          <a href="#" class="card-link">View project →</a>
+      <div class="stats-row" id="stats-row">
+        <article class="stat-card">
+          <span class="stat-label">Total workouts</span>
+          <strong class="stat-value" id="stat-count">0</strong>
         </article>
-        <article class="card">
-          <span class="card-tag">Project</span>
-          <h3>Project Two</h3>
-          <p>Another highlight — link to a live demo or repo when you have one.</p>
-          <a href="#" class="card-link">View project →</a>
+        <article class="stat-card">
+          <span class="stat-label">Total calories</span>
+          <strong class="stat-value" id="stat-calories">0</strong>
         </article>
-        <article class="card">
-          <span class="card-tag">Writing</span>
-          <h3>Article or post</h3>
-          <p>Share something you wrote, spoke about, or shipped recently.</p>
-          <a href="#" class="card-link">Read more →</a>
+        <article class="stat-card">
+          <span class="stat-label">Total hours</span>
+          <strong class="stat-value" id="stat-hours">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Avg calories / session</span>
+          <strong class="stat-value" id="stat-avg-cal">0</strong>
         </article>
       </div>
-    </section>
 
-    <section id="contact" class="section contact">
-      <h2>Contact</h2>
-      <p>Say hello — I'd love to hear from you.</p>
-      <a class="email-link" href="mailto:you@example.com">you@example.com</a>
-      <div class="social">
-        <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
-        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">X / Twitter</a>
+      <div class="insights" id="insights"></div>
+
+      <div class="charts-grid">
+        <article class="chart-card">
+          <h3>Calories over time</h3>
+          <canvas id="chart-calories-time"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Hours by workout type</h3>
+          <canvas id="chart-hours-type"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Calories by type</h3>
+          <canvas id="chart-calories-type"></canvas>
+        </article>
+        <article class="chart-card">
+          <h3>Sessions by type</h3>
+          <canvas id="chart-sessions-type"></canvas>
+        </article>
+        <article class="chart-card chart-wide">
+          <h3>Weekly calories (comparison)</h3>
+          <canvas id="chart-weekly"></canvas>
+        </article>
+        <article class="chart-card chart-wide">
+          <h3>Activity by day of week</h3>
+          <canvas id="chart-weekday"></canvas>
+        </article>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>© <span id="year"></span> Your Name. Built with plain HTML & CSS.</p>
+    <p>© <span id="year"></span> FitLog — data saved in this browser only.</p>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -1,11 +1,19 @@
-# My Website
+# FitLog — Workout Tracker
 
-A simple personal landing page built with plain HTML, CSS, and JavaScript. No build step required.
+A free workout log with **real-time analytics**. Data is stored in your browser (`localStorage`) — no server required. Works on GitHub Pages.
 
-## Customize
+## Features
 
-1. Open `index.html` and replace **Your Name**, bio text, project cards, email, and social links.
-2. Tweak colors in `styles.css` (`:root` variables at the top).
+- **Log workouts:** day, type, calories, hours
+- **Edit & delete** any entry from the table
+- **Live analytics** that update instantly when you change data:
+  - Summary stats (totals and averages)
+  - Text insights (top type, best session, kcal/hour)
+  - Calories over time (line)
+  - Hours & calories by workout type (bar)
+  - Sessions by type (doughnut)
+  - Weekly calorie comparison (bar)
+  - Hours by day of week (bar)
 
 ## Preview locally
 
@@ -14,25 +22,22 @@ cd my-website
 python3 -m http.server 8080
 ```
 
-Then open http://localhost:8080 in your browser.
+Open http://localhost:8080
 
-## Deploy for free
+## Publish updates
 
-### GitHub Pages (recommended)
+```bash
+git add .
+git commit -m "Update workout tracker"
+git push
+```
 
-1. Create a repo on GitHub and push this folder.
-2. In the repo: **Settings → Pages → Build and deployment → Source**: Deploy from branch `main`, folder `/ (root)`.
-3. Your site will be live at `https://<username>.github.io/<repo-name>/`.
+Live site: https://aaronshaijan.github.io/my-website/
 
-### Netlify
+## Customize workout types
 
-1. Sign up at [netlify.com](https://www.netlify.com).
-2. Drag and drop this folder onto the Netlify dashboard, or connect your GitHub repo.
-3. No build command needed — publish directory is the repo root.
+Edit the `<select id="workout-type">` options in `index.html`.
 
-### Vercel
+## Note on data
 
-1. Sign up at [vercel.com](https://vercel.com).
-2. Import the GitHub repo with framework preset **Other** (static files only).
-
-All three options offer free hosting for personal sites.
+Workouts are saved **only in this browser** on this device. Clearing site data removes them. For sync across devices you’d need a database (can be added later).
