@@ -38,6 +38,11 @@ Live site: https://aaronshaijan.github.io/my-website/
 
 Edit the `<select id="workout-type">` options in `index.html`.
 
-## Note on data
+## Data & saving
 
-Workouts are saved **only in this browser** on this device. Clearing site data removes them. For sync across devices you’d need a database (can be added later).
+Workouts are **saved automatically** in your browser (`localStorage`) on this laptop. Close the tab or restart — your data stays when you open the site again in the **same browser** (Chrome, Safari, etc.).
+
+- **Download backup** — exports a JSON file for safekeeping
+- **Restore backup** — imports that file if you switch browsers or clear data
+
+Use the same browser on your laptop for the simplest experience. Syncing to a phone or another computer would need cloud storage (can be added later).

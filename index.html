@@ -7,42 +7,70 @@
   <title>FitLog — Workout Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <div class="bg-scene" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
   <header class="site-header">
-    <a class="logo" href="#">FitLog</a>
+    <a class="logo" href="#"><span class="logo-mark">◆</span> FitLog</a>
     <nav aria-label="Main">
       <a href="#log">Log</a>
       <a href="#analytics">Analytics</a>
     </nav>
-    <button type="button" class="theme-toggle" aria-label="Switch color theme">◐</button>
+    <div class="header-end">
+      <div class="save-status" id="save-status" title="Your data is stored on this laptop">
+        <span class="save-dot" aria-hidden="true"></span>
+        <span id="save-status-text">Saved on this device</span>
+      </div>
+      <button type="button" class="theme-toggle" aria-label="Switch color theme">◐</button>
+    </div>
   </header>
 
   <main class="app">
     <section class="hero-banner">
-      <h1>Workout tracker</h1>
-      <p>Log sessions below. Analytics update instantly as you add, edit, or remove workouts.</p>
+      <p class="hero-tag">Personal fitness dashboard</p>
+      <h1>Track. Analyze. <span class="gradient-text">Improve.</span></h1>
+      <p class="hero-lead">
+        Log every session below. Your workouts are <strong>saved automatically</strong> on this laptop —
+        close the tab anytime and pick up where you left off.
+      </p>
+      <div class="data-toolbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="export-btn">Download backup</button>
+        <label class="btn btn-ghost btn-sm import-label">
+          Restore backup
+          <input type="file" id="import-input" accept="application/json" hidden />
+        </label>
+      </div>
     </section>
 
-    <!-- LOG SECTION -->
     <section id="log" class="panel">
       <div class="panel-head">
-        <h2>My workouts</h2>
-        <p class="panel-desc">Add or edit entries — date, type, calories, and duration.</p>
+        <div class="panel-title-row">
+          <span class="panel-icon" aria-hidden="true">🏋</span>
+          <div>
+            <h2>My workouts</h2>
+            <p class="panel-desc">Add or edit — day, type, calories, and hours.</p>
+          </div>
+        </div>
       </div>
 
       <form id="workout-form" class="workout-form">
         <input type="hidden" id="workout-id" />
         <div class="form-grid">
-          <label>
-            Day
+          <label class="field">
+            <span class="field-label">Day</span>
             <input type="date" id="workout-date" required />
           </label>
-          <label>
-            Type
+          <label class="field">
+            <span class="field-label">Type</span>
             <select id="workout-type" required>
               <option value="Strength">Strength</option>
               <option value="Cardio">Cardio</option>
@@ -53,13 +81,13 @@
               <option value="Other">Other</option>
             </select>
           </label>
-          <label>
-            Calories
-            <input type="number" id="workout-calories" min="0" step="1" placeholder="e.g. 350" required />
+          <label class="field">
+            <span class="field-label">Calories</span>
+            <input type="number" id="workout-calories" min="0" step="1" placeholder="350" required />
           </label>
-          <label>
-            Hours
-            <input type="number" id="workout-hours" min="0" step="0.25" placeholder="e.g. 1.5" required />
+          <label class="field">
+            <span class="field-label">Hours</span>
+            <input type="number" id="workout-hours" min="0" step="0.25" placeholder="1.5" required />
           </label>
         </div>
         <div class="form-actions">
@@ -86,28 +114,32 @@
       </div>
     </section>
 
-    <!-- ANALYTICS SECTION -->
     <section id="analytics" class="panel">
       <div class="panel-head">
-        <h2>Analytics</h2>
-        <p class="panel-desc">Comparisons and trends from your log — updates in real time.</p>
+        <div class="panel-title-row">
+          <span class="panel-icon" aria-hidden="true">📊</span>
+          <div>
+            <h2>Analytics</h2>
+            <p class="panel-desc">Live charts and comparisons from your log.</p>
+          </div>
+        </div>
       </div>
 
-      <div class="stats-row" id="stats-row">
-        <article class="stat-card">
+      <div class="stats-row">
+        <article class="stat-card stat-card-1">
           <span class="stat-label">Total workouts</span>
           <strong class="stat-value" id="stat-count">0</strong>
         </article>
-        <article class="stat-card">
+        <article class="stat-card stat-card-2">
           <span class="stat-label">Total calories</span>
           <strong class="stat-value" id="stat-calories">0</strong>
         </article>
-        <article class="stat-card">
+        <article class="stat-card stat-card-3">
           <span class="stat-label">Total hours</span>
           <strong class="stat-value" id="stat-hours">0</strong>
         </article>
-        <article class="stat-card">
-          <span class="stat-label">Avg calories / session</span>
+        <article class="stat-card stat-card-4">
+          <span class="stat-label">Avg kcal / session</span>
           <strong class="stat-value" id="stat-avg-cal">0</strong>
         </article>
       </div>
@@ -117,35 +149,37 @@
       <div class="charts-grid">
         <article class="chart-card">
           <h3>Calories over time</h3>
-          <canvas id="chart-calories-time"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-calories-time"></canvas></div>
         </article>
         <article class="chart-card">
           <h3>Hours by workout type</h3>
-          <canvas id="chart-hours-type"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-hours-type"></canvas></div>
         </article>
         <article class="chart-card">
           <h3>Calories by type</h3>
-          <canvas id="chart-calories-type"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-calories-type"></canvas></div>
         </article>
         <article class="chart-card">
           <h3>Sessions by type</h3>
-          <canvas id="chart-sessions-type"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-sessions-type"></canvas></div>
         </article>
         <article class="chart-card chart-wide">
-          <h3>Weekly calories (comparison)</h3>
-          <canvas id="chart-weekly"></canvas>
+          <h3>Weekly calories</h3>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chart-weekly"></canvas></div>
         </article>
         <article class="chart-card chart-wide">
-          <h3>Activity by day of week</h3>
-          <canvas id="chart-weekday"></canvas>
+          <h3>Hours by day of week</h3>
+          <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chart-weekday"></canvas></div>
         </article>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>© <span id="year"></span> FitLog — data saved in this browser only.</p>
+    <p>© <span id="year"></span> FitLog · <span id="footer-saved">0 workouts saved on this laptop</span></p>
   </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="app.js"></script>
 </body>

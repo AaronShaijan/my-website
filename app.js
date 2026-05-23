@@ -22,6 +22,88 @@ function loadWorkouts() {
 
 function saveWorkouts(workouts) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+  localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
+  notifySaved(workouts.length);
+}
+
+function notifySaved(count) {
+  const status = $("#save-status");
+  const statusText = $("#save-status-text");
+  const footer = $("#footer-saved");
+
+  status.classList.add("is-saving");
+  status.classList.remove("is-saved");
+  statusText.textContent = "Saving…";
+
+  clearTimeout(notifySaved._timer);
+  notifySaved._timer = setTimeout(() => {
+    status.classList.remove("is-saving");
+    status.classList.add("is-saved");
+    const when = formatSavedTime(localStorage.getItem(STORAGE_KEY + "-updated"));
+    statusText.textContent = when ? `Saved ${when}` : "Saved on this device";
+    footer.textContent = `${count} workout${count === 1 ? "" : "s"} saved on this laptop`;
+    showToast(`Saved — ${count} workout${count === 1 ? "" : "s"} on this device`);
+  }, 400);
+}
+
+function formatSavedTime(iso) {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60000) return "just now";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  return new Date(iso).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function showToast(message) {
+  const toast = $("#toast");
+  toast.textContent = message;
+  toast.hidden = false;
+  toast.classList.add("is-visible");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => {
+    toast.classList.remove("is-visible");
+    setTimeout(() => {
+      toast.hidden = true;
+    }, 350);
+  }, 2800);
+}
+
+function exportBackup() {
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    workouts: loadWorkouts(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `fitlog-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast("Backup downloaded");
+}
+
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const list = Array.isArray(data) ? data : data.workouts;
+      if (!Array.isArray(list)) throw new Error("Invalid file");
+      saveWorkouts(list);
+      resetForm();
+      refresh();
+      showToast(`Restored ${list.length} workouts`);
+    } catch {
+      showToast("Could not read backup file");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function uid() {
@@ -164,7 +246,7 @@ function makeChart(id, config) {
     ...config,
     options: {
       responsive: true,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           labels: { color: text },
@@ -384,6 +466,27 @@ function seedIfEmpty() {
   ]);
 }
 
+$("#export-btn")?.addEventListener("click", exportBackup);
+$("#import-input")?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (file) importBackup(file);
+  e.target.value = "";
+});
+
+function initSaveStatus() {
+  const count = loadWorkouts().length;
+  const status = $("#save-status");
+  if (count > 0) {
+    status.classList.add("is-saved");
+    const when = formatSavedTime(localStorage.getItem(STORAGE_KEY + "-updated"));
+    $("#save-status-text").textContent = when
+      ? `Welcome back · ${count} saved`
+      : `${count} workouts saved`;
+    $("#footer-saved").textContent = `${count} workout${count === 1 ? "" : "s"} saved on this laptop`;
+  }
+}
+
 initTheme();
 seedIfEmpty();
 refresh();
+initSaveStatus();
