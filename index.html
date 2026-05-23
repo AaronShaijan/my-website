@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A simple personal website — free to host anywhere." />
+  <title>Your Name — Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="#">Your Name</a>
+    <nav aria-label="Main">
+      <a href="#about">About</a>
+      <a href="#work">Work</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <button class="menu-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Hello, I'm</p>
+      <h1>Your Name</h1>
+      <p class="lead">
+        I build things on the web. This is a simple, fast site you can customize
+        and host for free on GitHub Pages, Netlify, or Vercel.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#contact">Get in touch</a>
+        <a class="btn btn-ghost" href="#work">See my work</a>
+      </div>
+    </section>
+
+    <section id="about" class="section">
+      <h2>About</h2>
+      <div class="about-grid">
+        <p>
+          Replace this with a short bio — what you do, what you care about,
+          and what you're looking for. A few sentences is enough.
+        </p>
+        <ul class="skills">
+          <li>Design</li>
+          <li>Development</li>
+          <li>Writing</li>
+          <li>Photography</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="work" class="section">
+      <h2>Selected work</h2>
+      <div class="cards">
+        <article class="card">
+          <span class="card-tag">Project</span>
+          <h3>Project One</h3>
+          <p>A brief description of something you built or contributed to.</p>
+          <a href="#" class="card-link">View project →</a>
+        </article>
+        <article class="card">
+          <span class="card-tag">Project</span>
+          <h3>Project Two</h3>
+          <p>Another highlight — link to a live demo or repo when you have one.</p>
+          <a href="#" class="card-link">View project →</a>
+        </article>
+        <article class="card">
+          <span class="card-tag">Writing</span>
+          <h3>Article or post</h3>
+          <p>Share something you wrote, spoke about, or shipped recently.</p>
+          <a href="#" class="card-link">Read more →</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact" class="section contact">
+      <h2>Contact</h2>
+      <p>Say hello — I'd love to hear from you.</p>
+      <a class="email-link" href="mailto:you@example.com">you@example.com</a>
+      <div class="social">
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">X / Twitter</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© <span id="year"></span> Your Name. Built with plain HTML & CSS.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
