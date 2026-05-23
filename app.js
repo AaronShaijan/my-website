@@ -149,10 +149,21 @@ function readForm() {
   };
 }
 
+const EMPTY_TABLE_HTML = `
+  <tr class="empty-row">
+    <td colspan="5">
+      <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">🏃</span>
+        <p class="empty-title">No workouts yet</p>
+        <p class="empty-desc">Log your first session above to unlock analytics and streaks.</p>
+      </div>
+    </td>
+  </tr>
+`;
+
 function renderList(workouts) {
   if (!workouts.length) {
-    listEl.innerHTML =
-      '<tr class="empty-row"><td colspan="5">No workouts yet. Add your first session above.</td></tr>';
+    listEl.innerHTML = EMPTY_TABLE_HTML;
     return;
   }
 
@@ -160,8 +171,8 @@ function renderList(workouts) {
 
   listEl.innerHTML = sorted
     .map(
-      (w) => `
-    <tr data-id="${w.id}">
+      (w, i) => `
+    <tr data-id="${w.id}" style="animation: fade-in 0.4s ease ${i * 0.04}s backwards">
       <td>${formatDay(w.date)}</td>
       <td><span class="type-pill">${w.type}</span></td>
       <td>${w.calories.toLocaleString()} kcal</td>
@@ -176,23 +187,57 @@ function renderList(workouts) {
     .join("");
 }
 
+function getWeeklyCalories(workouts) {
+  const todayKey = weekKey(new Date().toISOString().slice(0, 10));
+  return workouts
+    .filter((w) => weekKey(w.date) === todayKey)
+    .reduce((s, w) => s + w.calories, 0);
+}
+
+function getTodayCalories(workouts) {
+  const today = new Date().toISOString().slice(0, 10);
+  return workouts.filter((w) => w.date === today).reduce((s, w) => s + w.calories, 0);
+}
+
 function updateStats(workouts) {
   const count = workouts.length;
   const totalCal = workouts.reduce((s, w) => s + w.calories, 0);
   const totalHrs = workouts.reduce((s, w) => s + w.hours, 0);
+  const weeklyCal = getWeeklyCalories(workouts);
 
   $("#stat-count").textContent = count;
   $("#stat-calories").textContent = totalCal.toLocaleString();
   $("#stat-hours").textContent = totalHrs.toFixed(1);
   $("#stat-avg-cal").textContent = count ? Math.round(totalCal / count).toLocaleString() : "0";
+  $("#stat-weekly").textContent = weeklyCal.toLocaleString();
+  const heroToday = $("#hero-today-cal");
+  if (heroToday) heroToday.textContent = getTodayCalories(workouts).toLocaleString();
+}
+
+function updateEmptyStates(workouts) {
+  const hasData = workouts.length > 0;
+  const chartsGrid = $("#charts-grid");
+  const analyticsEmpty = $("#analytics-empty");
+
+  chartsGrid?.classList.toggle("is-empty", !hasData);
+  if (analyticsEmpty) analyticsEmpty.hidden = hasData;
+
+  document.querySelectorAll(".chart-empty").forEach((node) => {
+    const id = node.dataset.chart;
+    const canvas = document.getElementById(id);
+    node.hidden = hasData;
+    if (canvas) canvas.style.visibility = hasData ? "visible" : "hidden";
+  });
 }
 
 function buildInsights(workouts) {
   const el = $("#insights");
   if (!workouts.length) {
     el.innerHTML = "";
+    el.hidden = true;
     return;
   }
+  el.hidden = false;
 
   const byType = {};
   workouts.forEach((w) => {
@@ -214,16 +259,19 @@ function buildInsights(workouts) {
 }
 
 function chartColors(n) {
+  const styles = getComputedStyle(document.documentElement);
   const base = [
-    "#c8f560",
-    "#6eb5ff",
-    "#ff8a6b",
-    "#c77dff",
-    "#ffd166",
-    "#4dd4ac",
-    "#f472b6",
-  ];
-  return Array.from({ length: n }, (_, i) => base[i % base.length]);
+    styles.getPropertyValue("--chart-1").trim(),
+    styles.getPropertyValue("--chart-2").trim(),
+    styles.getPropertyValue("--chart-3").trim(),
+    styles.getPropertyValue("--chart-4").trim(),
+    styles.getPropertyValue("--chart-5").trim(),
+    styles.getPropertyValue("--chart-6").trim(),
+    styles.getPropertyValue("--chart-7").trim(),
+  ].filter(Boolean);
+  const fallback = ["#39ff14", "#00e5ff", "#ff6b2c", "#a855f7", "#ffd60a", "#ff4757", "#2ed573"];
+  const palette = base.length ? base : fallback;
+  return Array.from({ length: n }, (_, i) => palette[i % palette.length]);
 }
 
 function destroyChart(id) {
@@ -247,28 +295,34 @@ function makeChart(id, config) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: { duration: 700, easing: "easeOutQuart" },
       plugins: {
         legend: {
-          labels: { color: text },
+          labels: { color: text, font: { family: "'Inter', sans-serif", size: 11 } },
         },
       },
-      scales: config.type === "doughnut" || config.type === "pie" ? undefined : {
-        x: {
-          ticks: { color: muted, maxRotation: 45 },
-          grid: { color: border },
-        },
-        y: {
-          ticks: { color: muted },
-          grid: { color: border },
-          beginAtZero: true,
-        },
-      },
+      scales:
+        config.type === "doughnut" || config.type === "pie"
+          ? undefined
+          : {
+              x: {
+                ticks: { color: muted, maxRotation: 45 },
+                grid: { color: border },
+              },
+              y: {
+                ticks: { color: muted },
+                grid: { color: border },
+                beginAtZero: true,
+              },
+            },
       ...config.options,
     },
   });
 }
 
 function renderCharts(workouts) {
+  updateEmptyStates(workouts);
+
   if (!workouts.length) {
     ["chart-calories-time", "chart-hours-type", "chart-calories-type", "chart-sessions-type", "chart-weekly", "chart-weekday"].forEach(destroyChart);
     return;
@@ -280,6 +334,9 @@ function renderCharts(workouts) {
   });
   const dates = Object.keys(byDate).sort();
 
+  const green = getComputedStyle(document.documentElement).getPropertyValue("--accent-green").trim();
+  const cyan = getComputedStyle(document.documentElement).getPropertyValue("--accent-cyan").trim();
+
   makeChart("chart-calories-time", {
     type: "line",
     data: {
@@ -288,10 +345,12 @@ function renderCharts(workouts) {
         {
           label: "Calories",
           data: dates.map((d) => byDate[d]),
-          borderColor: "#c8f560",
-          backgroundColor: "rgba(200, 245, 96, 0.15)",
+          borderColor: green || "#39ff14",
+          backgroundColor: "rgba(57, 255, 20, 0.12)",
           fill: true,
-          tension: 0.3,
+          tension: 0.35,
+          pointRadius: 4,
+          pointHoverRadius: 6,
         },
       ],
     },
@@ -347,7 +406,7 @@ function renderCharts(workouts) {
         {
           label: "Calories",
           data: weeks.map((w) => byWeek[w]),
-          backgroundColor: "#6eb5ff",
+          backgroundColor: cyan || "#00e5ff",
         },
       ],
     },
@@ -368,7 +427,7 @@ function renderCharts(workouts) {
         {
           label: "Hours",
           data: hrsByWeekday,
-          backgroundColor: "#4dd4ac",
+          backgroundColor: green || "#39ff14",
         },
       ],
     },
@@ -430,12 +489,52 @@ listEl.addEventListener("click", (e) => {
   }
 });
 
+function initReveal() {
+  const reveals = document.querySelectorAll(".reveal");
+  const show = () => reveals.forEach((el, i) => {
+    setTimeout(() => el.classList.add("is-visible"), 80 + i * 100);
+  });
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
+    );
+    reveals.forEach((el) => io.observe(el));
+  } else {
+    show();
+  }
+}
+
+function initNav() {
+  const toggle = document.querySelector(".nav-toggle");
+  const nav = document.querySelector(".site-nav");
+  if (!toggle || !nav) return;
+
+  toggle.addEventListener("click", () => {
+    const open = nav.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
 function initTheme() {
   const root = document.documentElement;
   const btn = document.querySelector(".theme-toggle");
   const stored = localStorage.getItem("theme");
-  const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-  const theme = stored || (prefersLight ? "light" : "dark");
+  const theme = stored || "dark";
   root.setAttribute("data-theme", theme);
   btn.textContent = theme === "light" ? "☀" : "◐";
 
@@ -487,6 +586,8 @@ function initSaveStatus() {
 }
 
 initTheme();
+initNav();
+initReveal();
 seedIfEmpty();
 refresh();
 initSaveStatus();
