@@ -58,6 +58,10 @@
     </div>
   </header>
 
+  <div class="storage-banner" id="storage-banner" hidden>
+    <p><strong>Storage blocked.</strong> Your browser is not saving data. Turn off Private Browsing or allow site data for this page.</p>
+  </div>
+
   <main class="app">
     <!-- ========== HERO ========== -->
     <section class="hero" aria-labelledby="hero-title">
@@ -69,18 +73,21 @@
           <span class="line">Transform.</span>
         </h1>
         <p class="hero-tagline">
-          Push harder. Log smarter. Your workouts sync automatically on this device — close anytime, come back stronger.
+          Push harder. Log smarter. Click <strong>Save all data</strong> before closing the tab.
+          Use the same browser and URL each time so your log stays on this laptop.
         </p>
         <div class="hero-actions">
           <a href="#log" class="btn btn-primary btn-glow">Log workout</a>
           <a href="#analytics" class="btn btn-outline">View analytics</a>
         </div>
         <div class="data-toolbar">
+          <button type="button" class="btn btn-primary btn-sm" id="save-all-btn">Save all data</button>
           <button type="button" class="btn btn-ghost btn-sm" id="export-btn">Download backup</button>
           <label class="btn btn-ghost btn-sm import-label">
             Restore backup
             <input type="file" id="import-input" accept="application/json" hidden />
           </label>
+          <button type="button" class="btn btn-ghost btn-sm" id="clear-all-btn">Clear all workouts</button>
         </div>
       </div>
       <div class="hero-visual reveal" aria-hidden="true">
@@ -175,8 +182,10 @@
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" id="submit-btn">Add workout</button>
+          <button type="button" class="btn btn-outline" id="save-all-btn-2">Save all data</button>
           <button type="button" class="btn btn-outline" id="cancel-edit" hidden>Cancel edit</button>
         </div>
+        <p class="save-hint">Changes save when you add or edit a workout. Use <strong>Save all data</strong> to store everything before closing the tab.</p>
       </form>
 
       <div class="table-container">
@@ -223,7 +232,10 @@
 
       <div class="charts-grid" id="charts-grid">
         <article class="chart-card">
-          <header class="chart-head"><h3>Calories over time</h3></header>
+          <header class="chart-head">
+            <h3>Calories over time</h3>
+            <button type="button" class="chart-expand" data-chart="chart-calories-time" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap"><canvas id="chart-calories-time"></canvas></div>
             <div class="chart-empty" data-chart="chart-calories-time" hidden>
@@ -233,7 +245,10 @@
           </div>
         </article>
         <article class="chart-card">
-          <header class="chart-head"><h3>Hours by workout type</h3></header>
+          <header class="chart-head">
+            <h3>Hours by workout type</h3>
+            <button type="button" class="chart-expand" data-chart="chart-hours-type" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap"><canvas id="chart-hours-type"></canvas></div>
             <div class="chart-empty" data-chart="chart-hours-type" hidden>
@@ -243,7 +258,10 @@
           </div>
         </article>
         <article class="chart-card">
-          <header class="chart-head"><h3>Calories by type</h3></header>
+          <header class="chart-head">
+            <h3>Calories by type</h3>
+            <button type="button" class="chart-expand" data-chart="chart-calories-type" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap"><canvas id="chart-calories-type"></canvas></div>
             <div class="chart-empty" data-chart="chart-calories-type" hidden>
@@ -253,7 +271,10 @@
           </div>
         </article>
         <article class="chart-card">
-          <header class="chart-head"><h3>Sessions by type</h3></header>
+          <header class="chart-head">
+            <h3>Sessions by type</h3>
+            <button type="button" class="chart-expand" data-chart="chart-sessions-type" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap"><canvas id="chart-sessions-type"></canvas></div>
             <div class="chart-empty" data-chart="chart-sessions-type" hidden>
@@ -263,7 +284,10 @@
           </div>
         </article>
         <article class="chart-card chart-wide">
-          <header class="chart-head"><h3>Weekly calories</h3></header>
+          <header class="chart-head">
+            <h3>Weekly calories</h3>
+            <button type="button" class="chart-expand" data-chart="chart-weekly" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chart-weekly"></canvas></div>
             <div class="chart-empty" data-chart="chart-weekly" hidden>
@@ -273,7 +297,10 @@
           </div>
         </article>
         <article class="chart-card chart-wide">
-          <header class="chart-head"><h3>Hours by day of week</h3></header>
+          <header class="chart-head">
+            <h3>Hours by day of week</h3>
+            <button type="button" class="chart-expand" data-chart="chart-weekday" aria-label="Enlarge chart">⛶</button>
+          </header>
           <div class="chart-body">
             <div class="chart-canvas-wrap chart-canvas-tall"><canvas id="chart-weekday"></canvas></div>
             <div class="chart-empty" data-chart="chart-weekday" hidden>
@@ -299,6 +326,21 @@
   </footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Enlarged chart modal -->
+  <div class="chart-modal" id="chart-modal" hidden role="dialog" aria-modal="true" aria-labelledby="chart-modal-title">
+    <div class="chart-modal-backdrop" data-close-modal></div>
+    <div class="chart-modal-panel">
+      <header class="chart-modal-head">
+        <h2 id="chart-modal-title">Chart</h2>
+        <button type="button" class="chart-modal-close" id="chart-modal-close" aria-label="Close">✕</button>
+      </header>
+      <div class="chart-modal-body">
+        <canvas id="chart-modal-canvas"></canvas>
+      </div>
+      <p class="chart-modal-hint">Click outside or press Esc to close</p>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

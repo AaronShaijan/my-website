@@ -1,7 +1,25 @@
 const STORAGE_KEY = "fitlog-workouts";
+const CHART_IDS = [
+  "chart-calories-time",
+  "chart-hours-type",
+  "chart-calories-type",
+  "chart-sessions-type",
+  "chart-weekly",
+  "chart-weekday",
+];
+
+const CHART_TITLES = {
+  "chart-calories-time": "Calories over time",
+  "chart-hours-type": "Hours by workout type",
+  "chart-calories-type": "Calories by type",
+  "chart-sessions-type": "Sessions by type",
+  "chart-weekly": "Weekly calories",
+  "chart-weekday": "Hours by day of week",
+};
 
 const charts = {};
 let editingId = null;
+let modalChartId = null;
 
 const $ = (sel) => document.querySelector(sel);
 const form = $("#workout-form");
@@ -12,18 +30,68 @@ const submitBtn = $("#submit-btn");
 document.getElementById("year").textContent = new Date().getFullYear();
 $("#workout-date").valueAsDate = new Date();
 
-function loadWorkouts() {
+function storageWorks() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const test = "__fitlog_test__";
+    localStorage.setItem(test, "1");
+    localStorage.removeItem(test);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function loadWorkouts() {
+  if (!storageWorks()) return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }
 }
 
-function saveWorkouts(workouts) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
-  localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
-  notifySaved(workouts.length);
+function saveWorkouts(workouts, options = {}) {
+  const { silent = false } = options;
+  if (!storageWorks()) {
+    showToast("Cannot save — browser storage is blocked");
+    $("#storage-banner").hidden = false;
+    return false;
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts));
+    localStorage.setItem(STORAGE_KEY + "-updated", new Date().toISOString());
+    localStorage.setItem(STORAGE_KEY + "-saved-by-user", "1");
+    if (!silent) notifySaved(workouts.length);
+    return true;
+  } catch {
+    showToast("Save failed — storage may be full or blocked");
+    return false;
+  }
+}
+
+function saveAllNow() {
+  const workouts = loadWorkouts();
+  if (saveWorkouts(workouts)) {
+    showToast(`Saved ${workouts.length} workout${workouts.length === 1 ? "" : "s"} on this device`);
+  }
+}
+
+function clearAllWorkouts() {
+  if (
+    !confirm(
+      "Delete ALL workouts from this device? This cannot be undone (unless you have a backup file)."
+    )
+  ) {
+    return;
+  }
+  saveWorkouts([], { silent: true });
+  localStorage.setItem(STORAGE_KEY + "-no-demo", "1");
+  resetForm();
+  refresh();
+  showToast("All workouts cleared — add your own below");
 }
 
 function notifySaved(count) {
@@ -281,16 +349,16 @@ function destroyChart(id) {
   }
 }
 
-function makeChart(id, config) {
-  destroyChart(id);
-  const canvas = document.getElementById(id);
-  if (!canvas) return;
+function makeChart(id, config, canvasId = id) {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !config) return;
   const styles = getComputedStyle(document.documentElement);
   const muted = styles.getPropertyValue("--muted").trim() || "#9a9a92";
   const text = styles.getPropertyValue("--text").trim() || "#f5f5f0";
   const border = styles.getPropertyValue("--border").trim() || "#2a2a2a";
 
-  charts[id] = new Chart(canvas, {
+  charts[canvasId] = new Chart(canvas, {
     ...config,
     options: {
       responsive: true,
@@ -320,117 +388,212 @@ function makeChart(id, config) {
   });
 }
 
+function getChartConfig(chartId, workouts) {
+  if (!workouts.length) return null;
+
+  const green = getComputedStyle(document.documentElement).getPropertyValue("--accent-green").trim();
+  const cyan = getComputedStyle(document.documentElement).getPropertyValue("--accent-cyan").trim();
+  const types = [...new Set(workouts.map((w) => w.type))].sort();
+  const colors = chartColors(types.length);
+
+  if (chartId === "chart-calories-time") {
+    const byDate = {};
+    workouts.forEach((w) => {
+      byDate[w.date] = (byDate[w.date] || 0) + w.calories;
+    });
+    const dates = Object.keys(byDate).sort();
+    return {
+      type: "line",
+      data: {
+        labels: dates.map(formatDay),
+        datasets: [
+          {
+            label: "Calories",
+            data: dates.map((d) => byDate[d]),
+            borderColor: green || "#39ff14",
+            backgroundColor: "rgba(57, 255, 20, 0.12)",
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+        ],
+      },
+    };
+  }
+
+  if (chartId === "chart-hours-type") {
+    return {
+      type: "bar",
+      data: {
+        labels: types,
+        datasets: [
+          {
+            label: "Hours",
+            data: types.map((t) =>
+              workouts.filter((w) => w.type === t).reduce((s, w) => s + w.hours, 0)
+            ),
+            backgroundColor: colors,
+          },
+        ],
+      },
+    };
+  }
+
+  if (chartId === "chart-calories-type") {
+    return {
+      type: "bar",
+      data: {
+        labels: types,
+        datasets: [
+          {
+            label: "Calories",
+            data: types.map((t) =>
+              workouts.filter((w) => w.type === t).reduce((s, w) => s + w.calories, 0)
+            ),
+            backgroundColor: colors,
+          },
+        ],
+      },
+    };
+  }
+
+  if (chartId === "chart-sessions-type") {
+    return {
+      type: "doughnut",
+      data: {
+        labels: types,
+        datasets: [
+          {
+            data: types.map((t) => workouts.filter((w) => w.type === t).length),
+            backgroundColor: colors,
+          },
+        ],
+      },
+      options: { scales: undefined },
+    };
+  }
+
+  if (chartId === "chart-weekly") {
+    const byWeek = {};
+    workouts.forEach((w) => {
+      const wk = weekKey(w.date);
+      byWeek[wk] = (byWeek[wk] || 0) + w.calories;
+    });
+    const weeks = Object.keys(byWeek).sort().slice(-8);
+    return {
+      type: "bar",
+      data: {
+        labels: weeks.map((w) => `Week of ${formatDay(w)}`),
+        datasets: [
+          {
+            label: "Calories",
+            data: weeks.map((w) => byWeek[w]),
+            backgroundColor: cyan || "#00e5ff",
+          },
+        ],
+      },
+    };
+  }
+
+  if (chartId === "chart-weekday") {
+    const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return {
+      type: "bar",
+      data: {
+        labels: weekdays.map((d) => d.slice(0, 3)),
+        datasets: [
+          {
+            label: "Hours",
+            data: weekdays.map((name) =>
+              workouts
+                .filter((w) => dayOfWeek(w.date) === name)
+                .reduce((s, w) => s + w.hours, 0)
+            ),
+            backgroundColor: green || "#39ff14",
+          },
+        ],
+      },
+    };
+  }
+
+  return null;
+}
+
 function renderCharts(workouts) {
   updateEmptyStates(workouts);
 
   if (!workouts.length) {
-    ["chart-calories-time", "chart-hours-type", "chart-calories-type", "chart-sessions-type", "chart-weekly", "chart-weekday"].forEach(destroyChart);
+    CHART_IDS.forEach(destroyChart);
     return;
   }
 
-  const byDate = {};
-  workouts.forEach((w) => {
-    byDate[w.date] = (byDate[w.date] || 0) + w.calories;
-  });
-  const dates = Object.keys(byDate).sort();
-
-  const green = getComputedStyle(document.documentElement).getPropertyValue("--accent-green").trim();
-  const cyan = getComputedStyle(document.documentElement).getPropertyValue("--accent-cyan").trim();
-
-  makeChart("chart-calories-time", {
-    type: "line",
-    data: {
-      labels: dates.map(formatDay),
-      datasets: [
-        {
-          label: "Calories",
-          data: dates.map((d) => byDate[d]),
-          borderColor: green || "#39ff14",
-          backgroundColor: "rgba(57, 255, 20, 0.12)",
-          fill: true,
-          tension: 0.35,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-        },
-      ],
-    },
+  CHART_IDS.forEach((id) => {
+    const config = getChartConfig(id, workouts);
+    if (config) makeChart(id, config);
+    else destroyChart(id);
   });
 
-  const types = [...new Set(workouts.map((w) => w.type))].sort();
-  const hoursByType = types.map((t) =>
-    workouts.filter((w) => w.type === t).reduce((s, w) => s + w.hours, 0)
-  );
-  const calByType = types.map((t) =>
-    workouts.filter((w) => w.type === t).reduce((s, w) => s + w.calories, 0)
-  );
-  const sessionsByType = types.map((t) => workouts.filter((w) => w.type === t).length);
-  const colors = chartColors(types.length);
+  if (modalChartId && !$("#chart-modal").hidden) {
+    const config = getChartConfig(modalChartId, workouts);
+    if (config) makeChart(modalChartId, config, "chart-modal-canvas");
+  }
+}
 
-  makeChart("chart-hours-type", {
-    type: "bar",
-    data: {
-      labels: types,
-      datasets: [{ label: "Hours", data: hoursByType, backgroundColor: colors }],
-    },
+function openChartModal(chartId) {
+  const workouts = loadWorkouts();
+  if (!workouts.length) {
+    showToast("Add workouts first to view charts");
+    return;
+  }
+
+  const config = getChartConfig(chartId, workouts);
+  if (!config) return;
+
+  modalChartId = chartId;
+  const modal = $("#chart-modal");
+  $("#chart-modal-title").textContent = CHART_TITLES[chartId] || "Chart";
+  modal.hidden = false;
+  document.body.classList.add("modal-open");
+
+  requestAnimationFrame(() => {
+    makeChart(chartId, config, "chart-modal-canvas");
+  });
+}
+
+function closeChartModal() {
+  destroyChart("chart-modal-canvas");
+  modalChartId = null;
+  const modal = $("#chart-modal");
+  if (modal) modal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function initChartModal() {
+  document.querySelectorAll(".chart-expand").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openChartModal(btn.dataset.chart);
+    });
   });
 
-  makeChart("chart-calories-type", {
-    type: "bar",
-    data: {
-      labels: types,
-      datasets: [{ label: "Calories", data: calByType, backgroundColor: colors }],
-    },
+  document.querySelectorAll(".chart-card").forEach((card) => {
+    const btn = card.querySelector(".chart-expand");
+    if (!btn) return;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".chart-expand")) return;
+      openChartModal(btn.dataset.chart);
+    });
+    card.style.cursor = "pointer";
   });
 
-  makeChart("chart-sessions-type", {
-    type: "doughnut",
-    data: {
-      labels: types,
-      datasets: [{ data: sessionsByType, backgroundColor: colors }],
-    },
-    options: { scales: undefined },
+  $("#chart-modal-close")?.addEventListener("click", closeChartModal);
+  document.querySelectorAll("[data-close-modal]").forEach((el) => {
+    el.addEventListener("click", closeChartModal);
   });
 
-  const byWeek = {};
-  workouts.forEach((w) => {
-    const wk = weekKey(w.date);
-    byWeek[wk] = (byWeek[wk] || 0) + w.calories;
-  });
-  const weeks = Object.keys(byWeek).sort().slice(-8);
-
-  makeChart("chart-weekly", {
-    type: "bar",
-    data: {
-      labels: weeks.map((w) => `Week of ${formatDay(w)}`),
-      datasets: [
-        {
-          label: "Calories",
-          data: weeks.map((w) => byWeek[w]),
-          backgroundColor: cyan || "#00e5ff",
-        },
-      ],
-    },
-  });
-
-  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const hrsByWeekday = weekdays.map((name) =>
-    workouts
-      .filter((w) => dayOfWeek(w.date) === name)
-      .reduce((s, w) => s + w.hours, 0)
-  );
-
-  makeChart("chart-weekday", {
-    type: "bar",
-    data: {
-      labels: weekdays.map((d) => d.slice(0, 3)),
-      datasets: [
-        {
-          label: "Hours",
-          data: hrsByWeekday,
-          backgroundColor: green || "#39ff14",
-        },
-      ],
-    },
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("#chart-modal").hidden) closeChartModal();
   });
 }
 
@@ -547,24 +710,16 @@ function initTheme() {
   });
 }
 
-function seedIfEmpty() {
-  if (loadWorkouts().length) return;
-  const today = new Date();
-  const daysAgo = (n) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - n);
-    return d.toISOString().slice(0, 10);
-  };
-  saveWorkouts([
-    { id: uid(), date: daysAgo(0), type: "Strength", calories: 420, hours: 1.25 },
-    { id: uid(), date: daysAgo(1), type: "Cardio", calories: 580, hours: 0.75 },
-    { id: uid(), date: daysAgo(3), type: "HIIT", calories: 510, hours: 1 },
-    { id: uid(), date: daysAgo(5), type: "Yoga", calories: 180, hours: 1 },
-    { id: uid(), date: daysAgo(7), type: "Strength", calories: 390, hours: 1.5 },
-    { id: uid(), date: daysAgo(10), type: "Walk", calories: 220, hours: 2 },
-  ]);
+function initStorageCheck() {
+  if (!storageWorks()) {
+    $("#storage-banner").hidden = false;
+    showToast("Warning: browser storage is blocked — data will not save");
+  }
 }
 
+$("#save-all-btn")?.addEventListener("click", saveAllNow);
+$("#save-all-btn-2")?.addEventListener("click", saveAllNow);
+$("#clear-all-btn")?.addEventListener("click", clearAllWorkouts);
 $("#export-btn")?.addEventListener("click", exportBackup);
 $("#import-input")?.addEventListener("change", (e) => {
   const file = e.target.files?.[0];
@@ -583,11 +738,23 @@ function initSaveStatus() {
       : `${count} workouts saved`;
     $("#footer-saved").textContent = `${count} workout${count === 1 ? "" : "s"} saved on this laptop`;
   }
+
+  if (
+    count >= 4 &&
+    !localStorage.getItem(STORAGE_KEY + "-saved-by-user") &&
+    !sessionStorage.getItem("fitlog-demo-hint")
+  ) {
+    sessionStorage.setItem("fitlog-demo-hint", "1");
+    setTimeout(() => {
+      showToast('Sample workouts? Use "Clear all workouts" then add your own.');
+    }, 1200);
+  }
 }
 
+initStorageCheck();
 initTheme();
 initNav();
 initReveal();
-seedIfEmpty();
+initChartModal();
 refresh();
 initSaveStatus();
